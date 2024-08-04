@@ -5,6 +5,7 @@ import { doc, collection, deleteDoc, getDocs, query, getDoc, setDoc } from "fire
 import { useState, useEffect } from "react";
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
+import { Analytics } from "@vercel/analytics/react"
 
 export default function Home() {
   const [inventory, setInventory] = useState([]);
