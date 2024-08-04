@@ -10,7 +10,7 @@ export default function Home() {
   const [inventory, setInventory] = useState([]);
   const [open, setOpen] = useState(false);
   const [itemName, setItemName] = useState('');
-  const [itemAmount, setItemAmount] = useState('');
+  const [itemQuantity, setItemQuantity] = useState('');
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState([]);
@@ -29,15 +29,15 @@ export default function Home() {
     setFilteredItems(inventoryList); // Initially set filtered items to the full inventory
   };
 
-  const addItem = async (item, amount) => {
+  const addItem = async (item, quantity) => {
     const docRef = doc(collection(firestore, 'inventory'), item);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      const { quantity, amount: existingAmount } = docSnap.data();
-      await setDoc(docRef, { quantity: quantity + 1, amount: existingAmount + parseFloat(amount) });
+      const { quantity: existingQuantity } = docSnap.data();
+      await setDoc(docRef, { quantity: existingQuantity + parseInt(quantity) });
     } else {
-      await setDoc(docRef, { quantity: 1, amount: parseFloat(amount) });
+      await setDoc(docRef, { quantity: parseInt(quantity) });
     }
 
     await updateInventory();
@@ -48,11 +48,11 @@ export default function Home() {
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      const { quantity, amount } = docSnap.data();
+      const { quantity } = docSnap.data();
       if (quantity === 1) {
         await deleteDoc(docRef);
       } else {
-        await setDoc(docRef, { quantity: quantity - 1, amount: amount - amount / quantity });
+        await setDoc(docRef, { quantity: quantity - 1 });
       }
     }
 
@@ -65,7 +65,7 @@ export default function Home() {
 
   const handleOpen = () => {
     setItemName('');
-    setItemAmount('');
+    setItemQuantity('');
     setError('');
     setOpen(true);
   };
@@ -79,15 +79,15 @@ export default function Home() {
       setError('Item name should contain only letters and spaces.');
       return;
     }
-    if (isNaN(itemAmount) || itemAmount <= 0) {
-      setError('Amount should be a positive number.');
+    if (isNaN(itemQuantity) || itemQuantity <= 0) {
+      setError('Quantity should be a positive number.');
       return;
     }
 
     setError('');
-    addItem(itemName, itemAmount);
+    addItem(itemName, itemQuantity);
     setItemName('');
-    setItemAmount('');
+    setItemQuantity('');
     handleClose();
   };
 
@@ -120,30 +120,27 @@ export default function Home() {
         <Typography variant="h4" component="h1" color="primary" sx={{ mb: { xs: 2, md: 0 } }}>
           Pantry Inventory
         </Typography>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<AddIcon />}
-          onClick={handleOpen}
-          sx={{ mb: { xs: 2, md: 0 } }}
-        >
-          Add New Item
-        </Button>
-      </Box>
-
-      <Box display="flex" alignItems="center" mb={2} flexDirection={{ xs: 'column', md: 'row' }}>
-        <TextField
-          variant="outlined"
-          placeholder="Search items"
-          value={searchQuery}
-          onChange={handleSearchChange}
-          onKeyDown={(event) => handleKeyDown(event, handleSearch)}
-          fullWidth
-          sx={{ mr: { md: 1 }, mb: { xs: 2, md: 0 } }}
-        />
-        <IconButton color="primary" onClick={handleSearch}>
-          <SearchIcon />
-        </IconButton>
+        <Box display="flex" alignItems="center" sx={{ gap: 1 }}>
+          <TextField
+            variant="outlined"
+            placeholder="Search items"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            onKeyDown={(event) => handleKeyDown(event, handleSearch)}
+            sx={{ width: { xs: '100%', sm: 'auto' }, mb: { xs: 2, md: 0 } }}
+          />
+          <IconButton color="primary" onClick={handleSearch}>
+            <SearchIcon />
+          </IconButton>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={handleOpen}
+          >
+            Add New Item
+          </Button>
+        </Box>
       </Box>
 
       {filteredItems.length === 0 ? (
@@ -162,23 +159,34 @@ export default function Home() {
         </Box>
       ) : (
         <Grid container spacing={3}>
-          {filteredItems.map(({ name, quantity, amount }) => (
+          {filteredItems.map(({ name, quantity }) => (
             <Grid item xs={12} sm={6} md={4} key={name}>
-              <Paper elevation={3} sx={{ p: 2, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <Paper
+                elevation={3}
+                sx={{
+                  p: 3,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  borderRadius: 2,
+                  transition: 'transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-5px)',
+                    boxShadow: 6,
+                  },
+                }}
+              >
                 <Typography variant="h6" component="h2" gutterBottom>
                   {name.charAt(0).toUpperCase() + name.slice(1)}
                 </Typography>
-                <Typography variant="body1">
+                <Typography variant="body1" color="textSecondary">
                   Quantity: {quantity}
-                </Typography>
-                <Typography variant="body1">
-                  Amount: ${amount !== undefined ? amount.toFixed(2) : '0.00'}
                 </Typography>
                 <Box display="flex" justifyContent="space-between" mt={2}>
                   <Button
                     variant="outlined"
                     color="primary"
-                    onClick={() => addItem(name, amount / quantity)}
+                    onClick={() => addItem(name, 1)}
                   >
                     Add
                   </Button>
@@ -202,7 +210,7 @@ export default function Home() {
           top="50%"
           left="50%"
           width={{ xs: 300, md: 400 }}
-          bgcolor="white"
+          bgcolor="grey.200"
           border="2px solid #000"
           boxShadow={24}
           p={4}
@@ -211,6 +219,7 @@ export default function Home() {
           gap={3}
           sx={{
             transform: 'translate(-50%, -50%)',
+            borderRadius: 2,
           }}
         >
           <Typography variant="h6">Add Item</Typography>
@@ -226,13 +235,13 @@ export default function Home() {
             <TextField
               variant="outlined"
               fullWidth
-              value={itemAmount}
-              placeholder="Amount"
-              onChange={(e) => setItemAmount(e.target.value)}
+              value={itemQuantity}
+              placeholder="Quantity"
+              onChange={(e) => setItemQuantity(e.target.value)}
               onKeyDown={(event) => handleKeyDown(event, handleAddItem)}
             />
             {error && (
-              <Typography variant="body2" color="red">
+              <Typography variant="body2" color="error">
                 {error}
               </Typography>
             )}
